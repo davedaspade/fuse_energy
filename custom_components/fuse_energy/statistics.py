@@ -45,8 +45,9 @@ _STAT_NAMES: dict[str, str] = {
 # How far back to re-check already-written days for a settled value.  Fuse
 # publishes provisional "FORECAST" bars first and revises them later, so a value
 # written early can be wrong and never gets corrected by the fill-window logic
-# (which only ever appends).  Two weeks covers the observed settlement lag.
-_REVISION_LOOKBACK_DAYS = 14
+# (which only ever appends).  One week covers the observed settlement lag: gas
+# already runs a day behind, and days written three days ago are still unsettled.
+_REVISION_LOOKBACK_DAYS = 7
 # Absolute difference (kWh or GBP) below which a value is considered unchanged.
 _REVISION_TOLERANCE = 0.005
 
@@ -426,7 +427,9 @@ async def async_inject_gas_yesterday(
             continue
         rows, changes = plan
         async_add_external_statistics(hass, _make_metadata(stat_id, unit), rows)
-        _LOGGER.info(
+        # WARNING, not INFO: this rewrites stored history, and integration INFO
+        # is not shown at HA's default log level, so a bad rewrite would be silent.
+        _LOGGER.warning(
             "FuseEnergy: revised %s — %d row(s) rewritten; changed: %s",
             stat_id, len(rows), "; ".join(changes),
         )
