@@ -362,7 +362,10 @@ async def async_inject_gas_yesterday(
                         continue
                     kwh  = _safe_float(bar.get("kWh"))
                     cost = _safe_float((bar.get("money") or {}).get("amount"))
-                    settled = _bar_is_settled(bar) and bar_date >= revision_start
+                    # Local change 2026-10-29: any bar type, not only REALISED. Fuse
+                    # revises gas through the next morning while the bar may still say
+                    # FORECAST; this follows the same figure as the Yesterday sensor.
+                    settled = bar_date >= revision_start
 
                     if is_gas:
                         if settled:
