@@ -34,6 +34,9 @@ final figures, and gas cost was low by a similar amount. Upstream issue
   (commit `4a65524`).
 - **HA 2026.11.** Cost statistics now pass `unit_class`, which HA 2026.11 requires
   (also from PR #6).
+- **HA 2027.8.** Meter devices link to the account device with `via_device_id`
+  instead of the deprecated `via_device`, which HA logged on every start and stops
+  accepting in 2027.8 (commit `0f96072`).
 
 Days older than 7 days are not revised. To correct older history, run
 `fuse_energy.import_history` with gas only (see below). One catch: the import skips
