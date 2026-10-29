@@ -2,6 +2,56 @@
 
 Home Assistant integration for [Fuse Energy](https://www.fuseenergy.com) that provides live sensors and full historical import for the Energy Dashboard.
 
+## About this fork
+
+This is a fork of [andrejkurlovic/fuse_energy](https://github.com/andrejkurlovic/fuse_energy),
+made on 29 October 2026 to fix gas figures in the Energy Dashboard. Everything else
+is the same as upstream.
+
+### The problem
+
+Fuse only gives gas as one total per day, for the day before. Just after midnight
+that total is provisional: Fuse keeps revising it through the next morning, and the
+first figure is often well below the final one. Upstream writes each day's gas into
+HA's long-term statistics once, on the first hourly poll after midnight, and never
+looks at that day again. So the Energy Dashboard keeps the provisional figure. Over
+the days checked when this fork was made, stored gas was about 23% below Fuse's
+final figures, and gas cost was low by a similar amount. Upstream issue
+[#5](https://github.com/andrejkurlovic/fuse_energy/issues/5) describes the same thing.
+
+### What this fork changes
+
+- **Gas days are revised.** Every hourly poll re-reads the last 7 days from Fuse. If a
+  day's kWh or cost has changed, that day and every later day are written again,
+  with the running totals recomputed (HA's statistics store a running total, so one
+  day can't be changed on its own). Each rewrite is logged at WARNING as
+  `FuseEnergy: revised ...` with the old and new figures. This is Jeff Aronow's fix
+  from upstream PR [#6](https://github.com/andrejkurlovic/fuse_energy/pull/6)
+  (commits `f342261`, `787ab89`).
+- **Any bar type counts.** PR #6 only revises from bars Fuse labels `REALISED`. Fuse
+  revises the figure while the bar can still say `FORECAST`, so this fork uses the
+  latest figure whatever the label, the same figure the Yesterday sensor shows
+  (commit `4a65524`).
+- **HA 2026.11.** Cost statistics now pass `unit_class`, which HA 2026.11 requires
+  (also from PR #6).
+
+Days older than 7 days are not revised. To correct older history, run
+`fuse_energy.import_history` with gas only (see below). One catch: the import skips
+days where Fuse now reports 0 kWh, so a day that had a figure before and is 0 now
+keeps its old row and old running total, which shows as a dip and a spike in the
+dashboard. After a rebuild, check that each day's running total equals the day
+before plus that day's value, and delete any row that doesn't fit.
+
+### Versions and updates
+
+Releases are tagged by date (`v2026.10.29` is the first). HACS installs the latest
+release and only offers an update when a new release is published, not on every
+commit. To ship a change: commit it, set `version` in
+`custom_components/fuse_energy/manifest.json` to the new date, then publish a release
+with a matching tag. Upstream fixes don't arrive here on their own: merge them in.
+If upstream merges PR #6 and fixes the bar-type point, this fork can be dropped
+and HACS pointed back at upstream.
+
 ## Features
 
 - **Two-device model**: separate Electricity Meter and Gas Meter devices
@@ -18,7 +68,7 @@ Home Assistant integration for [Fuse Energy](https://www.fuseenergy.com) that pr
 ### HACS (recommended)
 
 1. Add this repository as a **custom repository** in HACS:
-   - URL: `https://github.com/andrejkurlovic/fuse_energy`
+   - URL: `https://github.com/davedaspade/fuse_energy`
    - Category: Integration
 2. Install **Fuse Energy+**
 3. Restart Home Assistant
@@ -175,7 +225,7 @@ After running `import_history` with `dry_run: false`:
 - **Electricity granularity**: Hourly (not 30-minute) — Fuse's API returns 24 bars per day.
 - **Gas granularity**: Daily only — no sub-daily gas data is available from the Fuse API.
 - **Historical data**: Starts from your Fuse switch-in date (tested from 2025-09-09). Dates before switch-in return empty data (handled gracefully).
-- **Only REALISED bars are imported**: Forecast bars are skipped.
+- **Bar types**: electricity history imports only REALISED bars. Gas imports bars of any type, because Fuse labels recent gas days FORECAST while it is still revising them (see "About this fork").
 - **Rate limits**: Hourly backfill uses ~270 API calls spaced 0.3s apart. No known rate limit issues, but re-running immediately is fine (upsert is idempotent).
 
 ---
