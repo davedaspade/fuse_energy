@@ -31,12 +31,12 @@ final figures, and gas cost was low by a similar amount. Upstream issue
 - **Any bar type counts.** PR #6 only revises from bars Fuse labels `REALISED`. Fuse
   revises the figure while the bar can still say `FORECAST`, so this fork uses the
   latest figure whatever the label, the same figure the Yesterday sensor shows
-  (commit `4a65524`).
+  (commit `ea6d3bf`).
 - **HA 2026.11.** Cost statistics now pass `unit_class`, which HA 2026.11 requires
   (also from PR #6).
 - **HA 2027.8.** Meter devices link to the account device with `via_device_id`
   instead of the deprecated `via_device`, which HA logged on every start and stops
-  accepting in 2027.8 (commit `0f96072`).
+  accepting in 2027.8 (commit `b589ea2`).
 
 Days older than 7 days are not revised. To correct older history, run
 `fuse_energy.import_history` with gas only (see below). One catch: the import skips
